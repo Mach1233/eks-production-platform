@@ -1,0 +1,16 @@
+name: GitOps CD
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "gitops/**"
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Validator
+        run: echo "Validating K8s manifests..."
+    # Placeholder for Argo CD sync or additional checks
