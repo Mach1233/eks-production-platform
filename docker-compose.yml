@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   mongodb:
-    image: mongo:latest
+    image: mongo:7.0
     ports:
       - "27017:27017"
     volumes:
@@ -12,9 +12,7 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: password
 
   app:
-    build:
-      context: ./app
-      dockerfile: Dockerfile
+    image: cloud-native-eks-platform-app:latest
     ports:
       - "3000:3000"
     environment:
