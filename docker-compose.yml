@@ -1,26 +1,10 @@
-version: "3.8"
-
 services:
-  mongodb:
-    image: mongo:7.0
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: user
-      MONGO_INITDB_ROOT_PASSWORD: password
-
   app:
     image: cloud-native-eks-platform-app:latest
     ports:
       - "3000:3000"
     environment:
-      MONGODB_URI: mongodb://user:password@mongodb:27017/finance_tracker?authSource=admin
-      MONGODB_DB: finance_tracker
-      NODE_ENV: production
-    depends_on:
-      - mongodb
-
-volumes:
-  mongodb_data:
+      - MONGODB_URI=${MONGODB_URI} # <-- injected from host .env or shell
+      - NODE_ENV=development
+    # No depends_on anymore — Atlas is always available
+# No volumes needed anymore
