@@ -1,0 +1,4 @@
+# Placeholder values for ArgoCD Helm Chart
+server:
+  service:
+    type: LoadBalancer
