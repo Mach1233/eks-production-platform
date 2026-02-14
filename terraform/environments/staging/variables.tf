@@ -1,5 +1,9 @@
-variable "environment" {
-  description = "Environment name"
+# -----------------------------------------------------------------------------
+# Staging Environment Variables
+# -----------------------------------------------------------------------------
+
+variable "region" {
+  description = "AWS region"
   type        = string
-  default     = "staging"
+  default     = "eu-north-1"
 }
