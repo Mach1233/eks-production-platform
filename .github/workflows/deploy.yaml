@@ -1,0 +1,138 @@
+# FinTrack CI/CD Pipeline
+# Single workflow: Build → Test → Scan → Push ECR → Update Helm → ArgoCD auto-syncs
+# Triggers on push to develop (app changes) or manual dispatch
+name: Deploy FinTrack
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - "app/**"
+      - "helm/**"
+      - ".github/workflows/deploy.yaml"
+  workflow_dispatch: # Manual trigger
+
+env:
+  AWS_REGION: eu-north-1
+  ECR_REPOSITORY: fintrack
+  HELM_VALUES_PATH: helm/charts/fintrack/values.yaml
+
+permissions:
+  id-token: write # OIDC for AWS auth (no access keys needed)
+  contents: write # Push Helm tag update back to repo
+
+jobs:
+  # ─── Job 1: Build and Test ─────────────────────────
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.vars.outputs.image_tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set image tag
+        id: vars
+        run: echo "image_tag=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./app
+          push: false
+          load: true
+          tags: ${{ env.ECR_REPOSITORY }}:${{ steps.vars.outputs.image_tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ─── Job 2: Security Scan ─────────────────────────
+  scan:
+    name: Security Scan (Trivy)
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build image for scanning
+        run: docker build ./app -t ${{ env.ECR_REPOSITORY }}:scan
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.ECR_REPOSITORY }}:scan
+          format: table
+          exit-code: 1
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+  # ─── Job 3: Push to ECR ───────────────────────────
+  push:
+    name: Push to ECR
+    needs: [build, scan]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
+        run: |
+          docker build ./app -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "Pushed: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+  # ─── Job 4: Update Helm and Trigger GitOps ────────
+  update-helm:
+    name: Update Helm Tag (GitOps)
+    needs: [build, push]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get ECR Registry URL
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Update Helm values with new image tag
+        env:
+          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
+          IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
+        run: |
+          # Update image tag in values.yaml
+          sed -i "s|tag:.*|tag: \"$IMAGE_TAG\"|" $HELM_VALUES_PATH
+          # Update image repository if empty
+          sed -i "s|repository:.*|repository: \"$ECR_REGISTRY/$ECR_REPOSITORY\"|" $HELM_VALUES_PATH
+
+      - name: Commit and push Helm update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add $HELM_VALUES_PATH
+          git diff --staged --quiet || git commit -m "ci: update image tag to ${{ needs.build.outputs.image_tag }} [skip ci]"
+          git push

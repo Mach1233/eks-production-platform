@@ -1,4 +1,36 @@
-# Placeholder values for ArgoCD Helm Chart
+# ArgoCD Bootstrap Helm Values
+# Install: helm install argocd argo/argo-cd -n argocd --create-namespace -f values.yaml
+# Lightweight config for staging/portfolio use
+
 server:
   service:
-    type: LoadBalancer
+    type: LoadBalancer # Use ALB in production
+  extraArgs:
+    - --insecure # Disable TLS for demo (use cert-manager in production)
+
+# Reduce resource usage for small clusters
+controller:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+repoServer:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+# Disable Dex (SSO) — not needed for portfolio
+dex:
+  enabled: false
+
+# Disable notifications — not needed for portfolio
+notifications:
+  enabled: false
