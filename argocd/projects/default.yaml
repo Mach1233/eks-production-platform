@@ -1,15 +1,36 @@
+# ArgoCD AppProject for FinTrack
+# Scoped project for least-privilege (not using default project)
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
-  name: default
+  name: fintrack
   namespace: argocd
 spec:
-  description: Default project
+  description: FinTrack platform applications
+
+  # Only allow sources from our repo
   sourceRepos:
-    - "*"
+    - https://github.com/Mach1233/eks-production-platform.git
+
+  # Only deploy to fintrack namespace on in-cluster
   destinations:
-    - namespace: "*"
-      server: "*"
+    - namespace: fintrack
+      server: https://kubernetes.default.svc
+    - namespace: argocd
+      server: https://kubernetes.default.svc
+
+  # Allow common Kubernetes resources
   clusterResourceWhitelist:
-    - group: "*"
+    - group: ""
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: ""
+      kind: "*"
+    - group: apps
+      kind: "*"
+    - group: networking.k8s.io
+      kind: "*"
+    - group: autoscaling
+      kind: "*"
+    - group: external-secrets.io
       kind: "*"
