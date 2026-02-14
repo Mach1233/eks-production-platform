@@ -1,0 +1,55 @@
+# Fluent Bit Helm values
+# Ships container logs to CloudWatch via IRSA
+# Install: helm install fluent-bit fluent/fluent-bit -n logging --create-namespace -f fluent-bit-values.yaml
+
+serviceAccount:
+  create: true
+  name: fluent-bit
+  annotations:
+    # IRSA annotation — role ARN from terraform output
+    eks.amazonaws.com/role-arn: "" # Set to: module.iam.fluent_bit_role_arn
+
+config:
+  inputs: |
+    [INPUT]
+        Name              tail
+        Tag               kube.*
+        Path              /var/log/containers/*.log
+        Parser            docker
+        DB                /var/log/flb_kube.db
+        Mem_Buf_Limit     5MB
+        Skip_Long_Lines   On
+        Refresh_Interval  10
+
+  filters: |
+    [FILTER]
+        Name                kubernetes
+        Match               kube.*
+        Kube_URL            https://kubernetes.default.svc:443
+        Kube_CA_File        /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
+        Merge_Log           On
+        Keep_Log            Off
+        K8S-Logging.Parser  On
+        K8S-Logging.Exclude On
+
+  outputs: |
+    [OUTPUT]
+        Name                cloudwatch_logs
+        Match               kube.*
+        region              eu-north-1
+        log_group_name      /fintrack/containers
+        log_stream_prefix   eks-
+        auto_create_group   true
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 100m
+    memory: 128Mi
+
+tolerations:
+  - operator: Exists
+    effect: NoSchedule
