@@ -1,10 +1,15 @@
 # Project Documentation
 
-## Directory Structure
+## Architecture Decision Records (ADRs)
+- [ADR-001: Region Selection (eu-north-1)](./decisions/ADR-001-region.md)
+- [ADR-002: NAT Instance vs NAT Gateway](./decisions/ADR-002-nat-instance.md)
+- [ADR-003: MongoDB Atlas (M0 Free Tier)](./decisions/ADR-003-mongodb-atlas.md)
 
-- **architecture/**: Architecture diagrams, decision records (ADRs), and high-level designs.
-- **how-to/**: Guides for setup, deployment, debugging, and operational tasks.
+## Architecture Diagrams
+- [Full Architecture (Mermaid)](./diagrams/architecture.mmd) — paste into [mermaid.live](https://mermaid.live) to render
 
-## Key Guides (Coming Soon)
-- [AWS Setup Guide](./how-to/aws-setup.md)
-- [Disaster Recovery](./how-to/dr-plan.md)
+## How-To Guides
+- [Local Development](./how-to/local-dev.md)
+- [Terraform Apply](./how-to/terraform-apply.md)
+- ArgoCD Setup *(coming in Phase 5)*
+- Full Deploy Guide *(coming in Phase 9)*
