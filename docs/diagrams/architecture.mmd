@@ -1,0 +1,58 @@
+%% FinTrack Platform — Cloud-Native Architecture
+%% Render: paste into https://mermaid.live or view on GitHub
+
+graph TD
+    subgraph "User Access"
+        A[👤 User Browser]
+    end
+
+    subgraph "AWS Cloud — eu-north-1"
+        subgraph "VPC: 10.0.0.0/16"
+            subgraph "Public Subnets"
+                B[ALB Ingress Controller]
+                NAT[🖥️ NAT Instance<br/>t4g.micro + EIP]
+                IGW[Internet Gateway]
+            end
+
+            subgraph "Private Subnets"
+                subgraph "EKS Cluster"
+                    C[📦 FinTrack Pods<br/>Next.js App]
+                    ESO[🔐 External Secrets<br/>Operator]
+                    ARGO[🔄 ArgoCD]
+                    PROM[📊 Prometheus]
+                    GRAF[📈 Grafana]
+                    FB[📋 Fluent Bit<br/>DaemonSet]
+                    KYV[🛡️ Kyverno]
+                end
+            end
+        end
+
+        ECR[📦 ECR Registry]
+        SM[🔑 AWS Secrets Manager]
+        CW[☁️ CloudWatch Logs]
+    end
+
+    subgraph "External Services"
+        ATLAS[🍃 MongoDB Atlas<br/>M0 Free Tier]
+        GH[🐙 GitHub Repo]
+    end
+
+    A -->|HTTPS| B
+    B --> C
+    C -->|MONGODB_URI| ATLAS
+    NAT -->|Outbound| IGW
+    C -.->|via NAT| NAT
+
+    GH -->|Push| GHA[⚙️ GitHub Actions<br/>Build/Scan/Push]
+    GHA -->|Push Image| ECR
+    GHA -->|Update Helm Tag| GH
+    GH -->|Auto-Sync| ARGO
+    ARGO -->|Deploy| C
+
+    SM --> ESO
+    ESO -->|Inject Secrets| C
+
+    PROM -->|Scrape Metrics| C
+    GRAF -->|Visualize| PROM
+    FB -->|Ship Logs| CW
+    KYV -->|Enforce Policies| C
