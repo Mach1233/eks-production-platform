@@ -1,0 +1,13 @@
+apiVersion: v2
+name: fintrack
+description: FinTrack — Cloud-native financial tracking app on EKS
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - fintrack
+  - finance
+  - kubernetes
+  - eks
+maintainers:
+  - name: Mohamed Mechraoui
