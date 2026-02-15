@@ -1,122 +1,117 @@
-# FinTrack Platform: End-to-End Deep Dive
+# FinTrack Platform: Professional Deep Dive & File Analysis
 
-## **1. Executive Summary**
-This document provides a comprehensive technical analysis of the FinTrack Platform – a production-grade Kubernetes environment on AWS. The platform is designed for **high availability, security, and extreme cost optimization**, leveraging AWS Free Tier eligible services and Spot Instances.
-
-### **Key Achievements**
-- **Cost Efficiency**: Reduced estimated AWS costs from ~$150/month (standard EKS) to **~$15/month** by using Spot Instances, ARM-based NAT instance (vs NAT Gateway), and free-tier MongoDB Atlas.
-- **GitOps Driven**: 100% declarative infrastructure and application deployment using Terraform and ArgoCD.
-- **Secure by Default**: Implements "Zero Trust" principles with logical isolation, least-privilege IAM (IRSA), and strict network policies.
-- **Observability**: Full stack monitoring with Prometheus, Grafana, and CloudWatch Logs.
+## **1. Executive Overview**
+This document serves as the **definitive technical reference** for the FinTrack Platform. Unlike high-level summaries, this guide breaks down **every significant file** in the codebase, explaining its specific role, why it was created, and the technical decisions ("what makes it") embedded within.
 
 ---
 
-## **2. Infrastructure Architecture (Terraform)**
+## **2. Repository Root & Configuration**
+*Foundational files for project governance, automation, and hygiene.*
 
-### **2.1. VPC Design: The Cost-Saving NAT Strategy**
-* **Goal**: Provide private networking for EKS nodes while allowing outbound internet access for updates/API calls.
-* **Standard Approach**: AWS NAT Gateway. Cost: ~$0.045/hr + data processing ≈ **$30-40/month**.
-* **Our Solution**: **Self-Managed NAT Instance**.
-    * **Instance Type**: `t4g.micro` (ARM-based, highly efficient).
-    * **Cost**: ~$0.0042/hr (Spot/Reserved) ≈ **$3/month**.
-    * **Implementation**: A pure Terraform module (`modules/vpc`) deploys the EC2 instance in a public subnet, attaches an Elastic IP (for static whitelisting), and configures IP forwarding via `user_data` script. Route tables direct all private subnet traffic through this instance.
-
-### **2.2. EKS Cluster: Spot Instances & ARM**
-* **Control Plane**: Standard EKS (managed by AWS).
-* **Data Plane (Nodes)**:
-    * **Strategy**: Use **Spot Instances** for stateless workloads.
-    * **Instance Type**: `t3.micro` or `t3.small`.
-    * **Savings**: Spot instances offer **up to 70% discount** compared to On-Demand prices.
-    * **Reliability**: Configured with `min_size=1`, `max_size=3` to handle interruptions automatically.
-* **Result**: A fully functional Kubernetes cluster running for pennies per hour.
-
-### **2.3. IAM & Security (IRSA)**
-* **Problem**: Giving EC2 nodes broad permissions (e.g., `S3FullAccess`) is a security risk. If one pod is compromised, the attacker gets node-level access.
-* **Solution**: **IAM Roles for Service Accounts (IRSA)**.
-    * **Mechanism**: Maps AWS IAM Roles directly to Kubernetes Service Accounts using OIDC.
-    * **Implementation**:
-        * **External Secrets**: Only the ESO pod has permission to read from AWS Secrets Manager.
-        * **Fluent Bit**: Only the logging pod has permission to write to CloudWatch.
-        * **ALB Controller**: Only the ingress controller has permission to manage Load Balancers.
+| File | Role | Why Created? | Key Implementation Details |
+|------|------|--------------|----------------------------|
+| `README.md` | Entry Point | To provide immediate context, status, and navigation for new developers. | Badges for CI/CD status; Quick links to deep dives and how-tos. |
+| `.gitignore` | git Configuration | To prevent sensitive/junk files (node_modules, .tfstate, .env) from polluting the repo. | explicitly excludes `.terraform/`, `terraform.tfstate`, and `node_modules/`. |
+| `.pre-commit-config.yaml` | Automation Hook | To enforce code quality *before* commit (fail fast). | Runs `terraform fmt` to standardize HCL; `check-yaml` for syntax validation; `trailing-whitespace` fixer. |
+| `CONTRIBUTING.md` | Governance | To standardize how developers collaborate. | Defines "Conventional Commits" standard (feat, fix, chore) required for semantic versioning. |
+| `LICENSE` | Legal | To define usage rights. | standard MIT License (open source, permissive). |
+| `app/.env.example` | Template | To document required environment variables without leaking secrets. | Lists `MONGODB_URI` but leaves value empty. |
 
 ---
 
-## **3. Application Deployment (Helm & ArgoCD)**
+## **3. Infrastructure as Code (Terraform)**
+*Implements the AWS infrastructure. Modular design for reusability.*
 
-### **3.1. The Helm Chart (`helm/charts/fintrack`)**
-We built a custom, production-ready Helm chart that abstracts standard Kubernetes complexity. Key features:
-- **Dynamic Configuration**: Values for image tags, replica counts, and resources can be overridden per environment.
-- **Ingress Layer**: Configured for AWS Load Balancer Controller (ALB) to expose the app securely.
-- **Autoscaling**: Horizontal Pod Autoscaler (HPA) automatically adds pods when CPU > 70%.
-- **Secrets Management**: Integrated with External Secrets Operator to inject sensitive data (DB URI) as environment variables without storing them in Git.
+### **3.1. Root Terraform**
+| File | Role | Why Created? | Key Implementation Details |
+|------|------|--------------|----------------------------|
+| `terraform/versions.tf` | Dependency Lock | To ensure reproducible infrastructure builds by pinning provider versions. | Pins `hashicorp/aws` to `~> 5.0`; Enforces Terraform CLI `>= 1.6`. |
 
-### **3.2. GitOps Workflow (ArgoCD)**
-* **Why ArgoCD?**: It ensures the cluster state **always matches Git**. No manual `kubectl apply`.
-* **Flow**:
-    1. **Code Push**: Developer pushes to `develop`.
-    2. **CI Pipeline**: Builds Docker image and pushes to ECR.
-    3. **Git Update**: CI updates `values.yaml` with the new image tag.
-    4. **Sync**: ArgoCD detects the change in Git and automatically syncs the new version to the cluster.
-* **Benefit**: Complete audit trail of deployments, easy rollbacks, and no "configuration drift."
+### **3.2. Module: VPC (`terraform/modules/vpc`)**
+*Role: Network Foundation*
+| File | Role | Why Created? | Key Implementation Details |
+|------|------|--------------|----------------------------|
+| `main.tf` | Resource Def | To define the network topology. | **Custom NAT Instance**: Defines an `aws_instance` (t4g.micro) instead of NAT Gateway to save ~$30/mo. `user_data` script enables IP forwarding. |
+| `variables.tf` | Interface | To make the module reusable across envs. | Accepts `cidr`, `public_subnets`, `private_subnets`. Defaults NAT to `t4g.micro` (ARM). |
+| `outputs.tf` | data Export | To pass connection data to other modules. | Exports `vpc_id` for EKS; `nat_public_ip` for MongoDB Atlas whitelist. |
 
----
+### **3.3. Module: EKS (`terraform/modules/eks`)**
+*Role: Kubernetes Cluster*
+| File | Role | Why Created? | Key Implementation Details |
+|------|------|--------------|----------------------------|
+| `main.tf` | Resource Def | To provision the Control Plane and Worker Nodes. | **Spot Instances**: Configures `eks_managed_node_groups` with `capacity_type = "SPOT"` and `t3.micro`. **IRSA**: Enables `enable_irsa = true` for fine-grained pod permissions. |
+| `variables.tf` | Interface | Configuration flexibility. | Allows setting `node_min_size`, `node_max_size` to control cost/scale. |
+| `outputs.tf` | data Export | Connectivity details. | Exports `cluster_endpoint` and `oidc_provider_arn` (critical for IAM). |
 
-## **4. CI/CD Pipeline (GitHub Actions)**
+### **3.4. Module: IAM (`terraform/modules/iam`)**
+*Role: Security & Permissions*
+| File | Role | Why Created? | Key Implementation Details |
+|------|------|--------------|----------------------------|
+| `main.tf` | Resource Def | To define "Roles for Service Accounts" (IRSA). | Creates roles for **ESO** (SecretsReader), **FluentBit** (CloudWatchWriter), **ALB** (LoadBalancerAdmin). Uses `sts:AssumeRoleWithWebIdentity` condition on OIDC subject. |
 
-The pipeline (`.github/workflows/deploy.yaml`) is a single, streamlined workflow:
-
-1. **Build**: Compiles the Next.js application and creates a Docker image.
-2. **Security Scan (Trivy)**: Scans the Docker image for Critical/High vulnerabilities. Fails the build if issues are found.
-3. **Push to ECR**: Authenticates via **OIDC** (no long-lived AWS keys in GitHub Secrets!) and pushes the image.
-4. **Deploy**: Updates the Helm chart version in the git repository, triggering the ArgoCD sync.
-
----
-
-## **5. Security Strategy**
-
-### **5.1. Authentication & Authorization**
-- **AWS**: All CI/CD actions use **OIDC Federation**. No access keys are stored.
-- **Kubernetes**: RBAC is strictly enforced.
-
-### **5.2. Network Security**
-- **NetworkPolicies**: Default-deny approach.
-    - **Ingress**: Only allows traffic from the Ingress Controller (ALB) on port 3000.
-    - **Egress**: Only allows DNS (53), HTTPS (443), and MongoDB (27017).
-- **Security Groups**: The NAT instance uses a strict Security Group allowing inbound traffic *only* from private subnets.
-
-### **5.3. Workload Security (Kyverno)**
-We implemented **Kyverno** policies (`k8s/kyverno/`) to enforce best practices:
-- **Disallow Privileged Containers**: Prevents containers from running as root/privileged, mitigating container breakout attacks.
-- **Require Labels**: Ensures all deployments have ownership labels for cost tracking and management.
+### **3.5. Environment: Staging (`terraform/environments/staging`)**
+*Role: The "Glue" that wires modules together.*
+| File | Role | Why Created? | Key Implementation Details |
+|------|------|--------------|----------------------------|
+| `main.tf` | Composition | To deploy the specific staging environment. | Instantiates VPC, EKS, ECR, IAM. Sets RDS `enabled = false`. Passes `t4g.micro` to VPC and `SPOT` to EKS. |
+| `terraform.tfvars` | Configuration | To inject environment-specific values. | Sets `environment = "staging"`. |
 
 ---
 
-## **6. Observability (Monitoring & Logging)**
+## **4. Helm Chart (`helm/charts/fintrack`)**
+*Abstractions for Kubernetes Manifests. Defines HOW the app runs.*
 
-### **6.1. Metrics (Prometheus & Grafana)**
-- **Stack**: `kube-prometheus-stack`.
-- **Function**: Scrapes metrics from nodes, pods, and services.
-- **Storage**: Persistent Volumes ensure metrics survive pod restarts.
-- **Visibility**: Grafana dashboards provide real-time views of CPU/Memory usage and cluster health.
-
-### **6.2. Logging (Fluent Bit & CloudWatch)**
-- **Problem**: `kubectl logs` is ephemeral. If a pod dies, logs are lost.
-- **Solution**: **Fluent Bit** daemonset.
-- **Flow**: Reads container logs -> Enriches with Kubernetes metadata -> Ships to **AWS CloudWatch Logs**.
-- **Retention**: Logs are stored securely in CloudWatch for debugging and auditing.
-
----
-
-## **7. Troubleshooting Common Issues**
-
-| Issue | Potential Cause | Fix |
-|-------|-----------------|-----|
-| **Terraform Error: "Error acquiring the state lock"** | A previous command crashed or is still running. | Run `terraform force-unlock <LOCK_ID>` or delete `.terraform.lock.hcl` if local backend. |
-| **Pod Stuck in Pending** | No available Spot instances or resource limits too high. | Check `kubectl describe pod`. Verify EKS node group capacity. |
-| **ArgoCD OutOfSync** | Manual changes were made to the cluster. | Click "Sync" in ArgoCD with "Prune" enabled to overwrite manual changes. |
-| **DB Connection Failed** | NAT Instance or Security Group issue. | Check NAT instance status. Ensure MongoDB Atlas IP whitelist includes the NAT Elastic IP. |
+| File | Role | Why Created? | Key Implementation Details |
+|------|------|--------------|----------------------------|
+| `Chart.yaml` | Metadata | To define the chart version and name. | Version `0.1.0`. |
+| `values.yaml` | Defaults | To provide default configuration for the app. | `replicaCount: 2`; `hpa.enabled: true`; `ingress.className: alb`. Defines `externalSecret` config. |
+| `templates/deployment.yaml` | Workload | To run the Next.js container. | **Probes**: Liveness/Readiness probes Configured. **Secret Injection**: Uses `envFrom` referring to the ExternalSecret. |
+| `templates/service.yaml` | Networking | To provide a stable internal IP. | Type `ClusterIP` (internal only). Exposes port 80 targeting 3000. |
+| `templates/ingress.yaml` | Expose | To expose the app to the internet. | Uses AWS Load Balancer Controller annotations (`alb.ingress.kubernetes.io/scheme: internet-facing`). |
+| `templates/hpa.yaml` | Scaling | To auto-scale based on load. | Scales between 2-5 replicas if CPU > 70%. |
+| `templates/externalsecret.yaml`| Security | To sync AWS Secrets to K8s. | Defines `ExternalSecret` CRD that tells ESO to fetch `fintrack/mongodb-uri` from AWS Secrets Manager. |
+| `templates/networkpolicy.yaml`| Security | To firewall the pods. | **Zero Trust**: Ingress only from ALB; Egress only to DNS, HTTPS, MongoDB. |
 
 ---
 
-## **8. Conclusion**
-The FinTrack Platform is a state-of-the-art implementation of "Cloud Native" principles. By combining Terraform for infrastructure, ArgoCD for deployment, and rigorous security practices, we have created a platform that is **scalable, secure, and incredibly cost-effective**. It serves not just as a hosting environment, but as a comprehensive reference architecture for modern DevOps practices.
+## **5. GitOps & ArgoCD (`argocd/`)**
+*Defines HOW the app is delivered.*
+
+| File | Role | Why Created? | Key Implementation Details |
+|------|------|--------------|----------------------------|
+| `bootstrap/values.yaml` | install Config | To customize the ArgoCD installation itself. | Disables Dex/Notifications to save resources. Sets server to `LoadBalancer` (or NodePort). |
+| `projects/default.yaml` | Governance | To restrict what apps can do. | **Scoped Project**: Only allows deployments to `fintrack` namespace. Prevents access to `kube-system`. |
+| `applications/fintrack.yaml`| App Def | To tell ArgoCD *what* to sync. | Points to `helm/charts/fintrack` in `develop` branch. **Auto-Sync**: Enabled with `prune=true` (deletes orphaned resources) and `selfHeal=true` (undoes manual drift). |
+
+---
+
+## **6. CI/CD Pipeline (`.github/workflows/deploy.yaml`)**
+*Automation for Building and updating.*
+
+| Role | Why Created? | Key Implementation Details |
+|------|--------------|----------------------------|
+| **Job: Build** | Artifact Creation | Compiles app to Docker image. | Uses `docker/setup-buildx-action` for caching. |
+| **Job: Scan** | Security | To find vulnerabilities before deploy. | Uses **Trivy**. Fails on `CRITICAL` severity CVEs. |
+| **Job: Push** | Artifact Store | To host the image. | Uses **OIDC** (`aws-actions/configure-aws-credentials`). No static IAM keys. Pushes to ECR private repo. |
+| **Job: Update Helm**| Deployment Trigger| To implement GitOps. | Modifies `values.yaml` with `sed` to update `image.tag` config, then commits back to the repo. |
+
+---
+
+## **7. Security Policies (`k8s/kyverno/`)**
+*Cluster-wide Policy Enforcement.*
+
+| File | Role | Why Created? | Key Implementation Details |
+|------|------|--------------|----------------------------|
+| `disallow-privileged.yaml`| Enforcement | To prevent high-risk containers. | Validates that `securityContext.privileged` is NOT `true`. |
+| `require-labels.yaml` | Governance | To ensure organizational standards. | Enforces that every Deployment has `app.kubernetes.io/name` and `instance` labels for cost allocation/tracking. |
+
+---
+
+## **8. Monitoring (`k8s/monitoring/`)**
+*Observability Stack.*
+
+| File | Role | Why Created? | Key Implementation Details |
+|------|------|--------------|----------------------------|
+| `prometheus-values.yaml`| Config | Lightweight Prometheus stack. | Reduces retention to 3 days (save storage). Configures Persistent Volume for metrics integrity. |
+| `fluent-bit-values.yaml`| Log Shipping | To send logs to CloudWatch. | Configures `[OUTPUT]` plugin for `cloudwatch_logs`. Uses IRSA annotation for permissions. |
+| `alerts.yaml` | Alerting | To notify on failures. | Defines PromQL rules: `HighCPUUsage` (>80%), `PodCrashLooping` (restarts), `PodNotReady`. |
