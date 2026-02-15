@@ -33,17 +33,7 @@ This repo is my portfolio project to demonstrate:
 - Monitoring: Prometheus, Grafana, Fluent Bit
 
 ## Architecture Diagram
-```mermaid
-graph TD
-    A[User Browser] --> B[ALB Ingress]
-    B --> C[EKS Pods: Next.js App]
-    C --> D[MongoDB Atlas via NAT Instance]
-    E[GitHub Repo] --> F[GitHub Actions CI: Build/Push ECR]
-    F --> E[Update Helm Tag in Git]
-    E --> G[ArgoCD Sync]
-    G --> C
-    H[AWS Secrets Manager] --> I[External Secrets Operator] --> C
-```
+![alt text](docs/diagrams/Global_Diagramme.png)
 
 ## Quick Start (Local Dev)
 
