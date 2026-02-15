@@ -1,0 +1,79 @@
+# FinTrack Helm Chart Values
+# Override these for different environments
+
+# --- Image ---
+image:
+  repository: '' # Set to ECR URL: <account>.dkr.ecr.eu-north-1.amazonaws.com/fintrack
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# --- Replicas ---
+replicaCount: 2
+
+# --- Service ---
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+# --- Ingress (ALB) ---
+ingress:
+  enabled: true
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/healthcheck-path: /
+  hosts:
+    - host: ''
+      paths:
+        - path: /
+          pathType: Prefix
+
+# --- Resources ---
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+# --- HPA (Horizontal Pod Autoscaler) ---
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+# --- Environment Variables ---
+env:
+  NODE_ENV: production
+
+# --- External Secrets (ESO) ---
+externalSecret:
+  enabled: true
+  secretStoreRef:
+    name: aws-secrets-manager
+    kind: ClusterSecretStore
+  target:
+    name: fintrack-secrets
+  data:
+    - secretKey: MONGODB_URI
+      remoteRef:
+        key: fintrack/mongodb-uri
+
+# --- Network Policy ---
+networkPolicy:
+  enabled: true
+
+# --- Pod labels/annotations ---
+podAnnotations: {}
+podLabels: {}
+
+# --- Service Account ---
+serviceAccount:
+  create: true
+  name: fintrack
+  annotations: {}

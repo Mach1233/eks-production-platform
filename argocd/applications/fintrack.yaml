@@ -1,0 +1,37 @@
+# ArgoCD Application manifest for FinTrack
+# Points ArgoCD to the Helm chart in this repo for auto-sync
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fintrack
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: fintrack-platform
+spec:
+  project: fintrack
+
+  source:
+    repoURL: https://github.com/Mach1233/eks-production-platform.git
+    targetRevision: develop
+    path: helm/charts/fintrack
+    helm:
+      valueFiles:
+        - values.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: fintrack
+
+  syncPolicy:
+    automated:
+      prune: true # Delete resources removed from Git
+      selfHeal: true # Revert manual changes to match Git
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 5s
+        maxDuration: 3m0s
+        factor: 2
