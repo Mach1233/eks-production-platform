@@ -76,17 +76,25 @@ kubectl get nodes
 
 ## State Management
 
-Currently using **local backend** (file-based state). For team/production use:
+**Production Configuration (Implemented)**:
+We use a remote S3 backend with DynamoDB locking.
+1. Run `terraform/backend-setup/setup.sh` to create resources.
+2. Update `backend.tf` with the bucket name.
+3. Run `terraform init`.
+
 ```hcl
-# backend.tf — uncomment after creating S3 bucket + DynamoDB table
-backend "s3" {
-  bucket         = "fintrack-terraform-state"
-  key            = "staging/terraform.tfstate"
-  region         = "eu-north-1"
-  dynamodb_table = "terraform-locks"
-  encrypt        = true
+# terraform/environments/staging/backend.tf
+terraform {
+  backend "s3" {
+    bucket         = "fintrack-terraform-state-..."
+    key            = "staging/terraform.tfstate"
+    region         = "eu-north-1"
+    dynamodb_table = "fintrack-terraform-locks"
+    encrypt        = true
+  }
 }
 ```
+
 
 ## Teardown
 ```bash

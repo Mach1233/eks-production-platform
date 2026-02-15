@@ -1,6 +1,6 @@
 {{- if .Values.networkPolicy.enabled }}
-apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
 metadata:
   name: {{ include "fintrack.fullname" . }}
   labels:
@@ -13,7 +13,6 @@ spec:
     - Ingress
     - Egress
   ingress:
-    # Allow traffic from ALB / ingress controller
     - ports:
         - port: {{ .Values.service.targetPort }}
           protocol: TCP
@@ -24,11 +23,11 @@ spec:
           protocol: UDP
         - port: 53
           protocol: TCP
-    # Allow HTTPS outbound (MongoDB Atlas, AWS APIs)
+    # Allow HTTPS (AWS APIs, external calls)
     - ports:
         - port: 443
           protocol: TCP
-    # Allow MongoDB Atlas (default port)
+    # Allow MongoDB Atlas
     - ports:
         - port: 27017
           protocol: TCP

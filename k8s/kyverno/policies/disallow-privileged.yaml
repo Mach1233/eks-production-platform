@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kyverno.io/clusterpolicy_v1.json
 # Kyverno Policy: Disallow Privileged Containers
 # Prevents containers from running as privileged (security best practice)
 apiVersion: kyverno.io/v1

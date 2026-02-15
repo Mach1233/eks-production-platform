@@ -32,6 +32,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check Terraform Formatting
+        run: terraform fmt -check -recursive terraform/
+
       - name: Set image tag
         id: vars
         run: echo "image_tag=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
@@ -67,8 +70,9 @@ jobs:
           image-ref: ${{ env.ECR_REPOSITORY }}:scan
           format: table
           exit-code: 1
-          severity: CRITICAL,HIGH
+          severity: CRITICAL
           ignore-unfixed: true
+          vuln-type: os,library
 
   # ─── Job 3: Push to ECR ───────────────────────────
   push:

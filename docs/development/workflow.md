@@ -9,7 +9,7 @@
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/Mach1233/eks-production-platform.git
+git clone https://github.com/your-org/cloud-native-eks-platform.git
 cd cloud-native-eks-platform
 ```
 

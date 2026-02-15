@@ -1,0 +1,30 @@
+# Docker build context exclusions
+# Ignore git metadata
+.git
+.gitignore
+.github
+
+# Ignore dependencies
+node_modules
+npm-debug.log
+
+# Ignore infrastructure code
+terraform
+helm
+k8s
+argocd
+
+# Ignore documentation
+docs
+README.md
+CONTRIBUTING.md
+LICENSE
+
+# Ignore local env files
+.env
+.env.local
+.env.*.local
+
+# Ignore OS files
+.DS_Store
+Thumbs.db

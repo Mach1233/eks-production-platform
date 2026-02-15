@@ -1,16 +1,33 @@
-# Project Documentation
+# Cloud Native EKS Platform Documentation
 
-## Architecture Decision Records (ADRs)
-- [ADR-001: Region Selection (eu-north-1)](./decisions/ADR-001-region.md)
-- [ADR-002: NAT Instance vs NAT Gateway](./decisions/ADR-002-nat-instance.md)
-- [ADR-003: MongoDB Atlas (M0 Free Tier)](./decisions/ADR-003-mongodb-atlas.md)
+Welcome to the comprehensive documentation for the Cloud Native EKS Platform.
 
-## Architecture Diagrams
-- [Full Architecture (Mermaid)](./diagrams/architecture.mmd) — paste into [mermaid.live](https://mermaid.live) to render
+## 📚 Documentation Structure
 
-## How-To Guides
-- [Full Platform Deep Dive](./PLATFORM_DEEP_DIVE.md) — **Start Here for End-to-End Analysis**
-- [Local Development](./how-to/local-dev.md)
-- [Terraform Apply](./how-to/terraform-apply.md)
-- [ArgoCD Setup](./how-to/argocd-setup.md)
-- [Monitoring Setup](./how-to/monitoring-setup.md)
+Our documentation is organized by the phase of the project lifecycle:
+
+### [Phase 1: Local Development](development/)
+- **[Setup Guide](development/setup.md)**: Prerequisite tools and environment setup.
+- **[Workflow Guide](development/workflow.md)**: Running the app locally, testing, and contributing.
+
+### [Phase 2: Infrastructure](infrastructure/)
+- **[Architecture](infrastructure/architecture.md)**: High-level infrastructure overview.
+- **[Terraform Guide](infrastructure/terraform.md)**: Infrastructure as Code management.
+- **[Architecture Decisions (ADRs)](infrastructure/decisions/)**: Key technical decisions.
+
+### [Phase 3: Deployment](deployment/)
+- **[GitOps with ArgoCD](deployment/gitops.md)**: Continuous delivery setup.
+- **[CI/CD Pipelines](deployment/ci-cd.md)**: GitHub Actions workflows.
+- **[Secrets Management](deployment/secrets.md)**: External Secrets Operator usage.
+
+### [Phase 4: Operations & Security](operations/)
+- **[Monitoring](operations/monitoring.md)**: Prometheus/Grafana dashboards and alerts.
+- **[Security](operations/security.md)**: Policy enforcement, network security, and IAM.
+- **[Troubleshooting](operations/troubleshooting.md)**: Common issues and runbooks.
+
+## 🚀 Quick Start
+
+1. **Set up your environment**: follow the [Setup Guide](development/setup.md).
+2. **Deploy infrastructure**: follow the [Terraform Guide](infrastructure/terraform.md).
+3. **Configure GitOps**: follow the [GitOps Guide](deployment/gitops.md).
+4. **Monitor your cluster**: check the [Monitoring Guide](operations/monitoring.md).

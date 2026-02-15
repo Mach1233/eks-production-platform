@@ -12,6 +12,16 @@ This repo is my portfolio project to demonstrate:
 - Security (IRSA, External Secrets, NetworkPolicies)
 - Monitoring (Prometheus/Grafana)
 - Cost optimization (Free-tier AWS in eu-west-1, NAT instance)
+    > **Monthly Estimate: ~$18.00**
+    >
+    > | Resource | Spec | Est. Cost |
+    > | :--- | :--- | :--- |
+    > | **EKS Cluster** | Control Plane | ~$0.10/hr (Check Free Tier) |
+    > | **Worker Nodes** | 2x t3.micro (Spot) | ~$4.00 |
+    > | **NAT Instance** | t4g.micro (ARM) | ~$3.00 |
+    > | **Load Balancer** | ALB | ~$6.00 |
+    > | **Storage** | EBS Volumes | ~$5.00 |
+
 
 ## Tech Stack
 - App: Next.js, Node.js, Docker
@@ -43,13 +53,14 @@ docker-compose up
 Open http://localhost:3000
 
 ## AWS Setup Guide
-See `docs/how-to/aws-setup.md` for full steps. (We'll add this file later.)
+See [`docs/IMPLEMENTATION_GUIDE.md`](docs/IMPLEMENTATION_GUIDE.md) for full end-to-end setup instructions.
 
 ## Learning Journey
 See commit history for progression: Started with Next.js app, switched to Atlas, now building infra/GitOps.
 
 ## Contributing
-Use conventional commits. See `CONTRIBUTING.md`. (We'll add this later.)
+Use conventional commits. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
 
 ## Built by
 Mohamed Mechraoui for portfolio/learning.
