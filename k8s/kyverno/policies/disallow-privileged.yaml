@@ -38,6 +38,6 @@ spec:
         message: "Privileged init containers are not allowed."
         pattern:
           spec:
-            =(initContainers):
+            initContainers:
               - securityContext:
                   privileged: "false"
