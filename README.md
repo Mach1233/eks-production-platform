@@ -21,10 +21,6 @@ It simulates a real-world DevOps workflow including:
 This project was designed and implemented independently to demonstrate cloud architecture, automation, and security best practices.
 
 ---
-## Diagramme
-<img width="1953" height="1564" alt="image" src="https://github.com/user-attachments/assets/d3b46d82-1392-4e91-8d54-c85e638388ea" />
-
-
 
 ## 🎯 Objectives
 
@@ -37,6 +33,7 @@ This project was designed and implemented independently to demonstrate cloud arc
 ---
 
 ## 🏛 Architecture Overview
+<img width="1953" height="1564" alt="image" src="https://github.com/user-attachments/assets/d3b46d82-1392-4e91-8d54-c85e638388ea" />
 
 ### Infrastructure Components
 
