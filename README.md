@@ -1,56 +1,133 @@
-# FinTrack Platform: Cloud-Native Finance Tracker on AWS EKS
+# 🏗 EKS Production Platform
+### End-to-End Cloud-Native Deployment using Terraform, AWS EKS & GitHub Actions
 
-[![Terraform Version](https://img.shields.io/badge/Terraform-1.6-blueviolet)](https://www.terraform.io/) [![Kubernetes](https://img.shields.io/badge/Kubernetes-1.29-blue)](https://kubernetes.io/) [![ArgoCD](https://img.shields.io/badge/ArgoCD-GitOps-orange)](https://argoproj.github.io/cd/) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+---
 
-## Project Description
-FinTrack is a lightweight financial tracking app built with Next.js + Node.js, deployed on AWS EKS using Terraform IaC, ArgoCD GitOps, and Helm. It's stateless, connects to MongoDB Atlas, and is designed for learning cloud-native architecture.
+## 📌 Project Overview
 
-This repo is my portfolio project to demonstrate:
-- Infrastructure as Code (Terraform modules for VPC, EKS, IAM)
-- GitOps deployments (ArgoCD auto-sync from Git)
-- CI/CD (GitHub Actions with scans)
-- Security (IRSA, External Secrets, NetworkPolicies)
-- Monitoring (Prometheus/Grafana)
-- Cost optimization (Free-tier AWS in eu-west-1, NAT instance)
-    > **Monthly Estimate: ~$18.00**
-    >
-    > | Resource | Spec | Est. Cost |
-    > | :--- | :--- | :--- |
-    > | **EKS Cluster** | Control Plane | ~$0.10/hr (Check Free Tier) |
-    > | **Worker Nodes** | 2x t3.micro (Spot) | ~$4.00 |
-    > | **NAT Instance** | t4g.micro (ARM) | ~$3.00 |
-    > | **Load Balancer** | ALB | ~$6.00 |
-    > | **Storage** | EBS Volumes | ~$5.00 |
+This project demonstrates a production-oriented cloud-native platform built on AWS EKS using Infrastructure as Code (Terraform) and a fully automated CI/CD pipeline with GitHub Actions.
 
+It simulates a real-world DevOps workflow including:
 
-## Tech Stack
-- App: Next.js, Node.js, Docker
-- Infra: AWS (VPC, EKS, ECR, Secrets Manager) in eu-west-1
-- IaC: Terraform (modular, environments)
-- GitOps: ArgoCD + Helm
-- DB: MongoDB Atlas (free M0)
-- CI/CD: GitHub Actions
-- Monitoring: Prometheus, Grafana, Fluent Bit
+- Custom VPC networking
+- Private Kubernetes worker nodes
+- IAM Roles for Service Accounts (IRSA)
+- Remote Terraform state management
+- Container image build & push to ECR
+- Automated Kubernetes deployment
+- Horizontal Pod Autoscaling (HPA)
+- ALB Ingress for external access
 
-## Architecture Diagram
-![alt text](docs/diagrams/Global_Diagramme.png)
+This project was designed and implemented independently to demonstrate cloud architecture, automation, and security best practices.
 
-## Quick Start (Local Dev)
-
-```bash
-docker-compose up
-```
-Open http://localhost:3000
-
-## AWS Setup Guide
-See [`docs/IMPLEMENTATION_GUIDE.md`](docs/IMPLEMENTATION_GUIDE.md) for full end-to-end setup instructions.
-
-## Learning Journey
-See commit history for progression: Started with Next.js app, switched to Atlas, now building infra/GitOps.
-
-## Contributing
-Use conventional commits. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+---
+## Diagramme
+<img width="1953" height="1564" alt="image" src="https://github.com/user-attachments/assets/d3b46d82-1392-4e91-8d54-c85e638388ea" />
 
 
-## Built by
-Mohamed Mechraoui for portfolio/learning.
+
+## 🎯 Objectives
+
+- Design scalable AWS infrastructure using Terraform
+- Deploy a containerized Next.js application to EKS
+- Implement secure IAM configuration
+- Automate build & deployment with GitHub Actions
+- Apply production-grade DevOps principles
+
+---
+
+## 🏛 Architecture Overview
+
+### Infrastructure Components
+
+- Custom VPC
+- Public & Private Subnets
+- Internet Gateway & NAT Gateway
+- Amazon EKS Cluster
+- Managed Node Groups (private)
+- IAM Roles & Policies
+- IAM Roles for Service Accounts (IRSA)
+- Amazon ECR
+- Application Load Balancer (ALB Ingress)
+- Horizontal Pod Autoscaler (HPA)
+- S3 + DynamoDB (Terraform Remote State)
+
+---
+
+## 📐 Architecture Diagram
+
+_Add architecture diagram here (architecture.png)_
+
+---
+
+## 🛠 Infrastructure as Code (Terraform)
+
+### Remote State Configuration
+
+Terraform state is stored securely in:
+
+- Amazon S3 (state storage)
+- DynamoDB (state locking)
+
+This prevents:
+- State corruption
+- Concurrent modification issues
+- Local state risks
+
+### Directory Structure
+
+terraform/
+├── backend.tf
+├── main.tf
+├── variables.tf
+├── outputs.tf
+├── vpc.tf
+├── eks.tf
+├── iam.tf
+├── nodegroup.tf
+
+
+### Key Design Decisions
+
+- Modular structure for maintainability
+- Private worker nodes for security
+- Least privilege IAM policies
+- Isolated networking configuration
+
+---
+
+## ☸ Kubernetes Configuration
+
+The application deployment includes:
+
+- Deployment.yaml
+- Service.yaml
+- ALB Ingress configuration
+- ConfigMaps
+- Secrets
+- Horizontal Pod Autoscaler (HPA)
+
+### High Availability Strategy
+
+- Multiple replicas
+- Rolling updates
+- Self-healing pods
+- CPU-based autoscaling using HPA
+
+---
+
+## 🚀 CI/CD Pipeline (GitHub Actions)
+
+Fully automated pipeline:
+
+1. Build Docker image
+2. Push image to Amazon ECR
+3. Authenticate to EKS
+4. Apply Kubernetes manifests
+
+### Security Practices
+
+- GitHub Secrets for AWS credentials
+- No hardcoded secrets
+- IAM-based authentication
+- Controlled deployment workflow
